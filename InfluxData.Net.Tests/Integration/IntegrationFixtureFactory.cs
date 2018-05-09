@@ -1,11 +1,12 @@
 ﻿using System;
-using System.Configuration;
 using System.Threading.Tasks;
 using FluentAssertions;
 using InfluxData.Net.Common.Enums;
 using InfluxData.Net.Common.Helpers;
 using InfluxData.Net.InfluxDb;
+using InfluxData.Net.Tests.Infrastructure.AppSettings;
 using Moq;
+using System.Diagnostics;
 
 namespace InfluxData.Net.Integration.Kapacitor
 {
@@ -23,18 +24,19 @@ namespace InfluxData.Net.Integration.Kapacitor
 
         public bool VerifyAll { get; set; }
 
-        protected IntegrationFixtureFactory(string fakeDbPrefix, string influxDbEndpointUriKey, InfluxDbVersion influxDbVersion)
+        protected IntegrationFixtureFactory(string fakeDbPrefix, string influxDbEndpointUriKey, InfluxDbVersion influxDbVersion, bool throwOnWarning)
         {
+            Debug.WriteLine(influxDbEndpointUriKey);
             _fakeDbPrefix = fakeDbPrefix;
 
             this.DbName = CreateRandomDbName();
 
             this.InfluxDbClient = new InfluxDbClient(
-                ConfigurationManager.AppSettings.Get(influxDbEndpointUriKey),
-                ConfigurationManager.AppSettings.Get("influxDbUsername"),
-                ConfigurationManager.AppSettings.Get("influxDbPassword"),
+                ConfigurationManager.Get(influxDbEndpointUriKey),
+                ConfigurationManager.Get("InfluxDbUsername"),
+                ConfigurationManager.Get("InfluxDbPassword"),
                 influxDbVersion, 
-                throwOnWarning: false);
+                throwOnWarning: throwOnWarning);
 
             Task.Run(() => this.PurgeFakeDatabases()).Wait();
             Task.Run(() => this.CreateEmptyDatabase()).Wait();

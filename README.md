@@ -1,10 +1,12 @@
 InfluxData.Net
 ============
-**Compatible with InfluxDB v1.0.0-beta and Kapacitor v1.0.0-beta API's**
+**Compatible with InfluxDB v1.3.x and Kapacitor v1.0.0 API's**
 
-_NOTE: The library will most probably work just as fine with newer versions of the TICK stack as well but it hasn't been tested against them._
+_NOTE: The **library will most probably work just as fine with newer versions** of the TICK stack as well but it hasn't been tested against them._
 
 > InfluxData.Net is a portable .NET library to access the REST API of an [InfluxDB](https://influxdata.com/time-series-platform/influxdb/) database and [Kapacitor](https://influxdata.com/time-series-platform/kapacitor/) processing tool.
+
+**The library supports .Net Framework v4.6.1 and .Net Standard v2.0 (which implies .Net Core 2.0).**
 
 InfluxDB is the data storage layer in [InfluxData](https://influxdata.com/)'s [TICK stack](https://influxdata.com/get-started/#whats-the-tick-stack) which is an open-source end-to-end platform for managing time-series data at scale.
 
@@ -13,14 +15,15 @@ Kapacitor is a data processing engine. It can process both stream (subscribe rea
 Support for other TICK stack layers is also planned and will be implemented in the future when they become stable from InfluxData side.
 
 **Original Lib**
+
 This is a fork of [InfluxDb.Net](https://github.com/pootzko/InfluxDB.Net/), (which is in turn a fork of [InfluxDb.Net](https://github.com/ziyasal/InfluxDb.Net/)). Those NuGet libraries are only suitable for InfluxDB versions lower than v0.9.5.
 
 **Support for older versions**
 
 Currently older supported versions:
 
- - InfluxDB: v0.9.2, v0.9.6
- - Kapacitor: v0.10.0, v0.10.1
+ - InfluxDB: v0.9.2, v0.9.6, v1.0.0, v1.3.x
+ - Kapacitor: v0.10.0, v0.10.1, v1.0.0
 
 ## Table of contents
 
@@ -31,6 +34,7 @@ Currently older supported versions:
  - [Bugs & feature requests](#bugs--feature-requests)
  - [Contributing](#contributing)
  - [License](#license)
+ - [Changelog](https://github.com/pootzko/InfluxData.Net/blob/master/CHANGELOG.md)
 
 ## Installation
 You can download the [InfluxData.Net Nuget](https://www.nuget.org/packages/InfluxData.Net/) package to install the latest version of InfluxData.Net Lib.
@@ -40,7 +44,7 @@ You can download the [InfluxData.Net Nuget](https://www.nuget.org/packages/Influ
 To use InfluxData.Net InfluxDbClient you must first create an instance of `InfluxDbClient`:
 
 ```cs
-var influxDbClient = new InfluxDbClient("http://yourinfluxdb.com:8086/", "username", "password", InfluxDbVersion.v_1_0_0);
+var influxDbClient = new InfluxDbClient("http://yourinfluxdb.com:8086/", "username", "password", InfluxDbVersion.v_1_3);
 ```
 
 Additional, optional params for InfluxDbClient are a custom `HttpClient` if you think you need control over it, and `throwOnWarning` which will throw an `InfluxDataWarningException` if the InfluxDb API returns a warning as a part of the response. That should preferably be used only for debugging purposes.
@@ -106,6 +110,8 @@ If needed, a custom HttpClient can be used for making requests. Simply pass it i
   - _[PingAsync()](#pingasync)_
   - _[GetStatsAsync()](#getstatsasync)_
   - _[GetDiagnosticsAsync()](#getdiagnosticsasync)_
+- [Helpers](#helpers)
+  - _[serie.As<T>()](#serieas)_
 
 **Supported KapacitorClient modules and API calls**
 
@@ -165,7 +171,7 @@ The `Client.QueryAsync` can be used to execute any officially supported [InfluxD
 
 ```cs
 var query = "SELECT * FROM reading WHERE time > now() - 1h";
-var response = await influxDbClient.Client.QueryAsync(query, "yourDbName");
+var response = await influxDbClient.Client.QueryAsync(query, "yourDbName"[, epochFormat = null][, ]);
 ```
 
 The second `QueryAsync` overload will return the result of [multiple queries](https://docs.influxdata.com/influxdb/v0.9/guides/querying_data/) executed at once. The response will be a _flattened_ collection of multi-results series. This means that the resulting series from all queries will be extracted into a single collection. This has been implemented to make it easier on the developer in case he is querying the same measurement with different params multiple times at once.
@@ -179,9 +185,30 @@ var queries = new []
 var response = await influxDbClient.Client.QueryAsync(queries, "yourDbName");
 ```
 
-#### QueryChunkedAsync
+#### Chunked QueryAsync and MultiQueryAsync
 
 Check the usage [here](https://github.com/pootzko/InfluxData.Net/pull/39#issuecomment-287722949).
+
+
+#### Parameterized QueryAsync
+
+With support for parameterized queries ([#61](https://github.com/pootzko/InfluxData.Net/pull/61)), InfluxDB can also be queried in the following manner:
+
+``` cs
+var serialNumber = "F2EA2B0CDFF";
+var queryTemplate = "SELECT * FROM cpuTemp WHERE \"serialNumber\" = @SerialNumber";
+
+var response = await influxDbClient.Client.QueryAsync(
+    queryTemplate: queryTemplate,
+    parameters: new
+    {
+        @SerialNumber = serialNumber
+    },
+    dbName: "yourDbName"
+);
+```
+
+
 
 #### MultiQueryAsync
 
@@ -586,6 +613,16 @@ var response = await influxDbClient.Diagnostics.GetStatsAsync();
 var response = await influxDbClient.Diagnostics.GetDiagnosticsAsync();
 ```
 
+### Helpers
+
+#### serie.As<T>() <a name="serieas"></a>
+
+You can use it like:
+
+```cs
+var stronglyTypedCollection = serie.As<MyType>();
+```
+
 ## KapacitorClient
 
 ### Task Module
@@ -670,9 +707,11 @@ For easier administration, check this neat UI management tool for InfluxDB calle
 
 ## Bugs & feature requests
 
-If you encounter a bug, performance issue, a malfunction or would like a feature to be implemented, please open a new [issue](https://github.com/pootzko/InfluxData.Net/issues).
+If you encounter a bug, performance issue, a malfunction or would like a feature to be implemented, please open a new [issue](https://github.com/pootzko/InfluxData.Net/issues). If it's a bug report, please provide enough info so I could easily reproduce the issue you're experiencing - i.e. provide some sample data that's causing you issues, let me know exactly which library module you used to execute the query/request etc..
 
 ## Contributing
+
+If you would like to contribute with a new feature, perhaps the best starting point would be to open an issue and get the conversation going. A healthy discussion might give us good ideas about how to do things even before a single line of code gets written which in turn produces better results.
 
 Please apply your changes to the [develop branch](https://github.com/pootzko/InfluxData.Net/tree/develop) it makes it a bit easier and cleaner for me to keep everything in order. For extra points in the FLOSS hall of fame, write a few tests for your awesome contribution as well. :) Thanks for your help!
 

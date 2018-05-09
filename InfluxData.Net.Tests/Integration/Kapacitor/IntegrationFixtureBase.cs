@@ -1,12 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
 using InfluxData.Net.Common.Enums;
 using InfluxData.Net.InfluxDb.Enums;
 using InfluxData.Net.Kapacitor;
 using InfluxData.Net.Kapacitor.Models;
+using InfluxData.Net.Tests.Infrastructure.AppSettings;
 
 namespace InfluxData.Net.Integration.Kapacitor
 {
@@ -21,10 +20,10 @@ namespace InfluxData.Net.Integration.Kapacitor
             InfluxDbVersion influxDbVersion,
             string kapacitorEndpointUriKey,
             KapacitorVersion kapacitorVersion)
-            : base("FakeKapacitorDb", influxDbEndpointUriKey, influxDbVersion)
+            : base("FakeKapacitorDb", influxDbEndpointUriKey, influxDbVersion, false)
         {
             this.Sut = new KapacitorClient(
-                ConfigurationManager.AppSettings.Get(kapacitorEndpointUriKey),
+                ConfigurationManager.Get(kapacitorEndpointUriKey),
                 kapacitorVersion);
 
             this.Sut.Should().NotBeNull();
